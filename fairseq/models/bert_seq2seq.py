@@ -55,7 +55,6 @@ class BertLayerNorm(nn.Module):
         return self.gamma * x + self.beta
 
 def build_embedding(dictionary, embed_dim, is_encoder, path=None):
-
     if path is not None:
         if path.startswith('elmo:'):
             lm_path = path[5:]
@@ -423,6 +422,12 @@ class TransformerDecoderLayer(nn.Module):
             self.embed_dim, args.decoder_attention_heads,
             dropout=args.attention_dropout,
         )
+        # psl
+        # self.self_attn = MultiheadAttention(
+        #     self.embed_dim, args.decoder_attention_heads,
+        #     dropout=args.attention_dropout,
+        #     self_attention=args.self_attention
+        # )
         self.dropout = args.dropout
         self.relu_dropout = args.relu_dropout
         self.normalize_before = args.decoder_normalize_before
@@ -433,9 +438,14 @@ class TransformerDecoderLayer(nn.Module):
             self.encoder_attn = None
             self.encoder_attn_layer_norm = None
         else:
+            # self.encoder_attn = MultiheadAttention(
+            #     self.embed_dim, args.decoder_attention_heads,
+            #     dropout=args.attention_dropout,
+            # )
+            # psl
             self.encoder_attn = MultiheadAttention(
                 self.embed_dim, args.decoder_attention_heads,
-                dropout=args.attention_dropout,
+                dropout=args.attention_dropout, self_attention=args.self_attention
             )
             self.encoder_attn_layer_norm = BertLayerNorm(self.embed_dim)
 
@@ -652,6 +662,11 @@ class TransformerEncoderLayer(nn.Module):
             self.embed_dim, args.encoder_attention_heads,
             dropout=args.attention_dropout,
         )
+        # psl
+        # self.self_attn = MultiheadAttention(
+        #     self.embed_dim, args.encoder_attention_heads,
+        #     dropout=args.attention_dropout, self_attention=args.self_attention
+        # )
         self.dropout = args.dropout
         self.relu_dropout = args.relu_dropout
         self.normalize_before = args.encoder_normalize_before

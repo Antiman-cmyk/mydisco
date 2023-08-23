@@ -111,6 +111,8 @@ def data_file_path(prefix_path):
 class IndexedDataset(FairseqDataset):
     """Loader for TorchNet IndexedDataset"""
     _HDR_MAGIC = b'TNTIDX\x00\x00'
+    # psl
+    # _HDR_MAGIC = b'MMIDIDX\x00'
 
     def __init__(self, path, fix_lua_indexing=False):
         super().__init__()

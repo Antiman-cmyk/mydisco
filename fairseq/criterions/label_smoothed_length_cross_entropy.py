@@ -26,8 +26,8 @@ class LabelSmoothedLengthCrossEntropyCriterion(FairseqCriterion):
         """Add criterion-specific arguments to the parser."""
         parser.add_argument('--label-smoothing', default=0., type=float, metavar='D',
                             help='epsilon for label smoothing, 0 means no label smoothing')
-        parser.add_argument('--ignore-eos-loss', action='store_true', default=False,
-                            help='Ignore eos loss. Never predict eos.')
+        # parser.add_argument('--ignore-eos-loss', action='store_true', default=False,
+        #                     help='Ignore eos loss. Never predict eos.')
 
     def forward(self, model, sample, reduce=True):
         """Compute the loss for the given sample.

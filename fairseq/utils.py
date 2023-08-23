@@ -52,7 +52,6 @@ def apply_to_sample(f, sample):
 
 
 def move_to_cuda(sample):
-
     def _move_to_cuda(tensor):
         return tensor.cuda()
 
@@ -178,8 +177,8 @@ def make_positions(tensor, padding_idx, onnx_trace=False):
     # how to handle the dtype kwarg in cumsum.
     mask = tensor.ne(padding_idx).int()
     return (
-        torch.cumsum(mask, dim=1).type_as(mask) * mask
-    ).long() + padding_idx
+                   torch.cumsum(mask, dim=1).type_as(mask) * mask
+           ).long() + padding_idx
 
 
 def strip_pad(tensor, pad):
@@ -342,32 +341,33 @@ def get_available_activation_fns() -> List:
         'linear',
     ]
 
+
 # Multihead
-def masked_multi_head_attention_forward(query,                           # type: Tensor
-                                 key,                             # type: Tensor
-                                 value,                           # type: Tensor
-                                 embed_dim_to_check,              # type: int
-                                 num_heads,                       # type: int
-                                 in_proj_weight,                  # type: Tensor
-                                 in_proj_bias,                    # type: Tensor
-                                 bias_k,                          # type: Optional[Tensor]
-                                 bias_v,                          # type: Optional[Tensor]
-                                 add_zero_attn,                   # type: bool
-                                 dropout_p,                       # type: float
-                                 out_proj_weight,                 # type: Tensor
-                                 out_proj_bias,                   # type: Tensor
-                                 training=True,                   # type: bool
-                                 key_padding_mask=None,           # type: Optional[Tensor]
-                                 need_weights=True,               # type: bool
-                                 attn_mask=None,                  # type: Optional[Tensor]
-                                 use_separate_proj_weight=False,  # type: bool
-                                 q_proj_weight=None,              # type: Optional[Tensor]
-                                 k_proj_weight=None,              # type: Optional[Tensor]
-                                 v_proj_weight=None,              # type: Optional[Tensor]
-                                 static_k=None,                   # type: Optional[Tensor]
-                                 static_v=None,                    # type: Optional[Tensor]
-                                 masked_attn=None                    # type: Optional[Tensor]
-                                 ):
+def masked_multi_head_attention_forward(query,  # type: Tensor
+                                        key,  # type: Tensor
+                                        value,  # type: Tensor
+                                        embed_dim_to_check,  # type: int
+                                        num_heads,  # type: int
+                                        in_proj_weight,  # type: Tensor
+                                        in_proj_bias,  # type: Tensor
+                                        bias_k,  # type: Optional[Tensor]
+                                        bias_v,  # type: Optional[Tensor]
+                                        add_zero_attn,  # type: bool
+                                        dropout_p,  # type: float
+                                        out_proj_weight,  # type: Tensor
+                                        out_proj_bias,  # type: Tensor
+                                        training=True,  # type: bool
+                                        key_padding_mask=None,  # type: Optional[Tensor]
+                                        need_weights=True,  # type: bool
+                                        attn_mask=None,  # type: Optional[Tensor]
+                                        use_separate_proj_weight=False,  # type: bool
+                                        q_proj_weight=None,  # type: Optional[Tensor]
+                                        k_proj_weight=None,  # type: Optional[Tensor]
+                                        v_proj_weight=None,  # type: Optional[Tensor]
+                                        static_k=None,  # type: Optional[Tensor]
+                                        static_v=None,  # type: Optional[Tensor]
+                                        masked_attn=None  # type: Optional[Tensor]
+                                        ):
     # type: (...) -> Tuple[Tensor, Optional[Tensor]]
     r"""
     Args:
@@ -512,9 +512,9 @@ def masked_multi_head_attention_forward(query,                           # type:
             v = torch.cat([v, bias_v.repeat(1, bsz, 1)])
             if attn_mask is not None:
                 attn_mask = torch.cat([attn_mask,
-                                      torch.zeros((attn_mask.size(0), 1),
-                                                  dtype=attn_mask.dtype,
-                                                  device=attn_mask.device)], dim=1)
+                                       torch.zeros((attn_mask.size(0), 1),
+                                                   dtype=attn_mask.dtype,
+                                                   device=attn_mask.device)], dim=1)
             if key_padding_mask is not None:
                 key_padding_mask = torch.cat(
                     [key_padding_mask, torch.zeros((key_padding_mask.size(0), 1),

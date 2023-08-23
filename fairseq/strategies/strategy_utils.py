@@ -41,7 +41,7 @@ def assign_single_value_long(x, i, y):
 def assign_multi_value_long(x, i, y):
     b, l = x.size()
     i = i + torch.arange(0, b*l, l, device=i.device).unsqueeze(1)
-    x.view(-1)[i.view(-1)] = y.view(-1)[i.view(-1)]
+    x.view(-1)[i.view(-1)] = y.view(-1)[i.view(-1)]  # x中mask的词由y中对应位置的token来替换
 
 
 def convert_tokens(dictionary, tokens):

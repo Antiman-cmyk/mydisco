@@ -48,8 +48,11 @@ def main(args):
 
     # Load ensemble
     print('| loading model(s) from {}'.format(args.path))
-    models, _ = utils.load_ensemble_for_inference(args.path.split(':'), task, model_arg_overrides=eval(args.model_overrides))
+    # models, _ = utils.load_ensemble_for_inference(args.path.split(':'), task, model_arg_overrides=eval(args.model_overrides))
+    models, _ = utils.load_ensemble_for_inference(args.path.split(','), task,
+                                                  model_arg_overrides=eval(args.model_overrides))
     models = [model.cuda() for model in models]
+
 
     # Optimize ensemble for generation
     for model in models:
@@ -113,7 +116,7 @@ def main(args):
                     hypo_tokens, hypo_str, alignment = utils.post_process_prediction(
                         hypo_tokens=hypos.int().cpu(),
                         src_str=src_str,
-                        alignment= None,
+                        alignment=None,
                         align_dict=align_dict,
                         tgt_dict=dict,
                         remove_bpe=args.remove_bpe,
@@ -237,6 +240,7 @@ def generate(strategy, encoder_input, models, tgt_dict, length_beam_size, gold_t
     
     duplicate_encoder_out(encoder_out, bsz, length_beam_size)
     model.length_beam_size = length_beam_size
+    # encoder_out['encoder_out'] = None  # psl
     hypotheses, lprobs = strategy.generate(model, encoder_out, tgt_tokens, tgt_dict)
     
     hypotheses = hypotheses.view(bsz, length_beam_size, max_len)

@@ -171,8 +171,13 @@ def load_model_ensemble_and_task(filenames, arg_overrides=None, task=None):
             task = tasks.setup_task(args)
 
         # build model for ensemble
+        # model.load_state_dict(state['model'], strict=True)
+        # psl
         model = task.build_model(args)
-        model.load_state_dict(state['model'], strict=True)
+        if hasattr(args, 'no_strict'):
+            model.load_state_dict(state['model'], strict=not args.no_strict)
+        else:
+            model.load_state_dict(state['model'], strict=True)
         ensemble.append(model)
     return ensemble, args, task
 

@@ -62,7 +62,9 @@ def infer_init_method(args):
                     node_id = int(os.environ.get('SLURM_NODEID'))
                     args.distributed_rank = node_id * gpus_per_node
                 else:
-                    assert ntasks_per_node == args.distributed_world_size // nnodes
+                    assert ntasks_per_node == args.distributed_world_size // nnodes, \
+                        "ntasks_per_node={}\ndistributed_world_size={}\nnnodes={}".format(
+                            ntasks_per_node, args.distributed_world_size, nnodes)
                     args.distributed_no_spawn = True
                     args.distributed_rank = int(os.environ.get('SLURM_PROCID'))
                     args.device_id = int(os.environ.get('SLURM_LOCALID'))

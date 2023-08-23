@@ -29,7 +29,7 @@ class DisCoTransformer(Transformer_nonautoregressive):
     def build_model(cls, args, task):
         """Build a new model instance."""
 
-        #for ds in task.datasets.values():
+        # for ds in task.datasets.values():
         #    ds.target_is_source = True
 
         # make sure all arguments are present in older models
@@ -38,7 +38,7 @@ class DisCoTransformer(Transformer_nonautoregressive):
             args.max_source_positions = 1024
         if not hasattr(args, 'max_target_positions'):
             args.max_target_positions = 1024
-        #if not task.args.dynamic_masking:
+        # if not task.args.dynamic_masking:
         #    # TODO: Completely move masking to the model for general purposes.
         #    raise RuntimeError('QMasking requires dynamic on-the-fly masking.')
         if not args.ignore_eos_loss:
@@ -68,11 +68,9 @@ class DisCoTransformer(Transformer_nonautoregressive):
                 tgt_dict, args.decoder_embed_dim, is_encoder=False, path=args.decoder_embed_path
             )
 
-
         encoder = TransformerEncoder(args, src_dict, encoder_embed_tokens, args.encoder_embed_scale)
         decoder = SelfTransformerDecoderQMask(args, tgt_dict, decoder_embed_tokens, args.decoder_embed_scale)
         return DisCoTransformer(encoder, decoder)
-
 
     @staticmethod
     def add_args(parser):
@@ -87,7 +85,9 @@ class DisCoTransformer(Transformer_nonautoregressive):
                             help='Mix AT and RM')
         parser.add_argument('--maskp', action='store_true', default=False,
                             help='Only one masking configuration for each sentence')
-
+        # psl
+        parser.add_argument('--ignore-eos-loss', action='store_true', default=False,
+                            help='Ignore eos loss. Always assume there is an eos at the end.')
 
 
 class SelfTransformerDecoderQMask(SelfTransformerDecoder):
@@ -103,8 +103,11 @@ class SelfTransformerDecoderQMask(SelfTransformerDecoder):
         left_pad (bool, optional): whether the input is left-padded. Default:
             ``False``
     """
+
     def __init__(self, args, dictionary, embed_tokens, embed_scale=None, no_encoder_attn=False, left_pad=False,
                  final_norm=True):
+        if hasattr(args, 'no_encoder_attn'):
+            no_encoder_attn = args.no_encoder_attn  # psl
         super().__init__(args, dictionary, embed_tokens, embed_scale, no_encoder_attn, left_pad, final_norm)
         # Update self.layers. This seems dirty. Refactorize the base init later.
         self.layers = nn.ModuleList([])
@@ -131,18 +134,18 @@ class SelfTransformerDecoderQMask(SelfTransformerDecoder):
         # Always attend to eos to avoid the all negative inf edge case.
         # Namely, [:, :, eos_idxes] = False (never mask out the attention to eos)
         bsz, max_len = decoder_padding_mask.shape
-        if masking_type=='token_masking':
+        if masking_type == 'token_masking':
             q_mask = prev_output_tokens.eq(self.masking_idx).unsqueeze(1).repeat([1, max_len, 1])
             return q_mask
 
-        elif masking_type=='full_masking':
+        elif masking_type == 'full_masking':
             q_mask = prev_output_tokens.float().new_ones([bsz, max_len, max_len])
             q_mask = q_mask.bool()
             ## EOS is always available
             q_mask = q_mask.masked_fill_(prev_output_tokens.unsqueeze(1).eq(self.eos_idx), False)
             return q_mask
 
-        elif masking_type=='easy_first_masking':
+        elif masking_type == 'easy_first_masking':
             assert gen_order is not None
             # mask out yourself and later tokens
             ## EOS, BOS, and pad do not see any other token.
@@ -154,15 +157,15 @@ class SelfTransformerDecoderQMask(SelfTransformerDecoder):
             q_mask = q_mask.masked_fill_(prev_output_tokens.unsqueeze(1).eq(self.padding_idx), True)
             return q_mask
 
-        assert masking_type=='random_masking'
+        assert masking_type == 'random_masking'
         # never attend to yourself. You are predicting yourself. C.f. vanilla autoregressive
         q_mask = prev_output_tokens.float().new_zeros([bsz, max_len, max_len])
         # [bsz, max_len, max_len]
         # First generate uniform (0, 1) to determine which words to mask randomly
         if not self.training:
             # evaluation model. Use numpy seed to have the same masking configuration at each epoch.
-            random_score = torch.Tensor(self.random.uniform(size = q_mask.shape)).to(q_mask.device)
-            cutoff_ratio = torch.Tensor(self.random.uniform(size = [bsz, max_len])).to(q_mask.device)
+            random_score = torch.Tensor(self.random.uniform(size=q_mask.shape)).to(q_mask.device)
+            cutoff_ratio = torch.Tensor(self.random.uniform(size=[bsz, max_len])).to(q_mask.device)
         else:
             seed = 0
             self.random = np.random.RandomState(seed)
@@ -191,7 +194,7 @@ class SelfTransformerDecoderQMask(SelfTransformerDecoder):
         q_mask = ~q_mask
         return q_mask
 
-    def forward(self, 
+    def forward(self,
                 prev_output_tokens,
                 encoder_out=None,
                 incremental_state=None,
@@ -213,8 +216,8 @@ class SelfTransformerDecoderQMask(SelfTransformerDecoder):
                 - the last decoder layer's attention weights of shape `(batch,
                   tgt_len, src_len)`
         """
-        incremental_state=None
-        
+        incremental_state = None
+
         decoder_padding_mask = prev_output_tokens.eq(self.padding_idx)
 
         # embed positions
@@ -282,6 +285,7 @@ class TransformerDecoderQMaskLayer(TransformerDecoderLayer):
         no_encoder_attn (bool, optional): whether to attend to encoder outputs.
             Default: ``False``
     """
+
     def __init__(self, args, no_encoder_attn=False):
         super().__init__(args, no_encoder_attn)
         # Update self_attn with masked_multihead
@@ -302,7 +306,8 @@ class TransformerDecoderQMaskLayer(TransformerDecoderLayer):
         residual = x_q
         x_q = self.maybe_layer_norm(self.self_attn_layer_norm, x_q, before=True)
         x_kv = self.maybe_layer_norm(self.self_attn_layer_norm, x_kv, before=True)
-        x_q, _ = self.self_attn(query=x_q, key=x_kv, value=x_kv, key_padding_mask=decoder_padding_mask, masked_attn=q_mask)
+        x_q, _ = self.self_attn(query=x_q, key=x_kv, value=x_kv, key_padding_mask=decoder_padding_mask,
+                                masked_attn=q_mask)
         # we do not use x_kv further. x_kv only knows output embedding input.
         x_q += residual
         x_q = F.dropout(x_q, p=self.dropout, training=self.training)
@@ -313,8 +318,8 @@ class TransformerDecoderQMaskLayer(TransformerDecoderLayer):
         if self.encoder_attn is not None:
             residual = x
             x = self.maybe_layer_norm(self.encoder_attn_layer_norm, x, before=True)
-            #import IPython as ipy
-            #ipy.embed()
+            # import IPython as ipy
+            # ipy.embed()
             x, attn = self.encoder_attn(
                 query=x,
                 key=encoder_out,

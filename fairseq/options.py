@@ -394,6 +394,10 @@ def add_checkpoint_args(parser):
                        help='metric to use for saving "best" checkpoints')
     group.add_argument('--maximize-best-checkpoint-metric', action='store_true',
                        help='select the largest metric value for saving "best" checkpoints')
+    # psl
+    group.add_argument("--no-strict", default=False, action='store_true',
+                       help="error when missing keys or unexpected keys")
+
     # fmt: on
     return group
 
@@ -497,6 +501,12 @@ def add_generation_args(parser):
                        help='Ignore eos loss. Always assume there is an eos at the end.')
     group.add_argument('--move-eos', action='store_true', default=False,
                        help='Move eos to the beginning')
+    # psl
+    group.add_argument('--no-encoder-attn', action='store_true', default=False,
+                       help='Move eos to the beginning')
+    group.add_argument('--self-attention', action='store_true', default=False,
+                       help='decoder self attention')
+
     # fmt: on
     return group
 

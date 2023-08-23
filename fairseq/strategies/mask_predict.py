@@ -27,18 +27,18 @@ class MaskPredict(DecodingStrategy):
         
         iterations = seq_len if self.iterations is None else self.iterations
         
-        tgt_tokens, token_probs, decoder_out = self.generate_non_autoregressive(model, encoder_out, tgt_tokens)
+        tgt_tokens, token_probs, decoder_out = self.generate_non_autoregressive(model, encoder_out, tgt_tokens)  # 通过挑选probs最大的词的idx选取tokens
         assign_single_value_byte(tgt_tokens, pad_mask, tgt_dict.pad())
         assign_single_value_byte(token_probs, pad_mask, 1.0)
         assign_single_value_byte(tgt_tokens, eos_mask, tgt_dict.eos())
         assign_single_value_byte(token_probs, eos_mask, 1.0)
 
         for counter in range(1, iterations):
-            num_mask = (seq_lens.float() * (1.0 - (counter / iterations))).long()
+            num_mask = (seq_lens.float() * (1.0 - (counter / iterations))).long()  # mask 数量根据迭代的轮次逐渐减少
 
             assign_single_value_byte(token_probs, pad_mask, 1.0)
             assign_single_value_byte(token_probs, eos_mask, 1.0)
-            mask_ind = self.select_worst(token_probs, num_mask)
+            mask_ind = self.select_worst(token_probs, num_mask)  # 根据probs低的挑选mask的词
             assign_single_value_long(tgt_tokens, mask_ind, tgt_dict.mask())
             assign_single_value_byte(tgt_tokens, pad_mask, tgt_dict.pad())
             assign_single_value_byte(tgt_tokens, eos_mask, tgt_dict.eos())
@@ -50,7 +50,8 @@ class MaskPredict(DecodingStrategy):
             decoder_out = model.decoder(tgt_tokens, encoder_out, masking_type='token_masking')
             new_tgt_tokens, new_token_probs, all_token_probs = generate_step_with_prob(decoder_out)
             
-            assign_multi_value_long(token_probs, mask_ind, new_token_probs)
+            assign_multi_value_long(token_probs, mask_ind, new_token_probs)  # token_probs中mask的词由new_token_probs中对应位置的token来替换
+            # TODO：用new_token_probs中的部分probs替换了token_probs中的部分probs之后不用重新归一化吗？token_probs中得到probs之和不为1了吧？
             assign_single_value_byte(token_probs, pad_mask, 1.0)
             assign_single_value_byte(token_probs, eos_mask, 1.0)
             
@@ -69,5 +70,5 @@ class MaskPredict(DecodingStrategy):
     def select_worst(self, token_probs, num_mask):
         bsz, seq_len = token_probs.size()
         masks = [token_probs[batch, :].topk(max(1, num_mask[batch]), largest=False, sorted=False)[1] for batch in range(bsz)]
-        masks = [torch.cat([mask, mask.new(seq_len - mask.size(0)).fill_(mask[0])], dim=0) for mask in masks]
+        masks = [torch.cat([mask, mask.new(seq_len - mask.size(0)).fill_(mask[0])], dim=0) for mask in masks]   # 为什么fill的是mask[0]?
         return torch.stack(masks, dim=0)
